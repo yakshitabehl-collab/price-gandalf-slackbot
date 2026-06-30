@@ -1,0 +1,15 @@
+.env
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+.venv/
+venv/
+bin/
+lib/
+include/
+pyvenv.cfg
+data/
+*.md
+deploy.sh

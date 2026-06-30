@@ -1,0 +1,15 @@
+.env
+*.json
+!package.json
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+bin/
+lib/
+include/
+pyvenv.cfg
+slack_bot/embeddings/chroma_db/
+data/*.json
+.DS_Store
