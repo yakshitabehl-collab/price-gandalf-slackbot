@@ -529,6 +529,75 @@ Dataset: fulfillment-dwh-production.cl
 Description: Version history of pricing campaign configurations in DPS.
 
 === END OF TABLE CATALOG ===
+
+=== DPS KNOWLEDGE — NUANCES & GOTCHAS ===
+
+--- ADDITIONAL TABLES ---
+
+TABLE: curated_data_shared.pricing_asa_full_configuration_versions
+Description: ASA (Automatic Scheme Assignment) full configuration history.
+Lookup field: asa_id
+
+TABLE: curated_data_shared.pricing_campaign_configuration_versions
+Description: Campaign configuration versions in DPS.
+
+TABLE: curated_data_shared.pricing_override_configuration_versions
+Description: Override configuration (non-primary for subscriptions).
+
+TABLE: cl.pricing_override_configuration_versions
+Description: PRIMARY source for subscription pricing. Use when tracing dynamic-pricing:subscription:<N> offer IDs.
+Filter: WHERE assignment_type = 'SUBSCRIPTION'
+Key mapping:
+  - vendor_group_assignment_id (DPS/OP term) = assignment_id (top-level column)
+  - vendor_group_price_config_id (DPS/OP term) = price_config.asa_price_config_id (nested, requires UNNEST(price_config))
+
+TABLE: bima_order_profitability
+Description: Source of truth for marketing FLGP (fully loaded gross profit) metric.
+
+---
+
+DPS OFFER ID DECODING
+
+Format: dynamic-pricing:<type>:<id>
+
+- dynamic-pricing:experiment:<N>      → curated_data_shared.dps_experiment_setups, WHERE vendor_group_variant_assignment_id = N → gives test_id, test_name
+- dynamic-pricing:subscription:<N>    → cl.pricing_override_configuration_versions, WHERE UNNEST(price_config).asa_price_config_id = N → gives assignment_id
+- dynamic-pricing:automatic-assignment:<N> → curated_data_shared.pricing_asa_full_configuration_versions, WHERE asa_id = N
+
+Subscription example: dynamic-pricing:subscription:4377 → asa_price_config_id = 4377, assignment_id = 512 ("All Hplus Vendors [Restaurants]")
+Reconciliation pipeline: dags/log/curated_data/sql/customer/coredata_incentives_reconciliation_dps_subscriptions.sql
+
+---
+
+KNOWN NUANCES & GOTCHAS
+
+- campaign_id NULLs: expected for Automatic Scheme (ASA) orders. Must join on assignment_id, not campaign_id.
+- has_subscription vs customer_treat_as_subscriber: different fields. customer_treat_as_subscriber is the pricing decision field — always use this one.
+- Subscriber status discrepancies between dps_sessions_mapped_to_orders and dynamic_pricing_user_sessions are expected in edge cases (e.g. QC campaign + pro user interaction).
+- travel_time_fee_id = -1 means free delivery — valid config, not a null or error.
+- DPS log outages: Hungerstation and Talabat historically most affected by AWS log drops. CVR metrics are impacted (missing sessions); order-level mapping impact typically <2%.
+- is_pro flag: order-level indicator (was this order a pro order), NOT a user-level flag. Never use is_pro = TRUE to define "pro users" in experiment populations.
+- randomization_unit is NULL for session-level tests in dps_experiment_setups — this is expected, not a data issue.
+- latest_comment column was added to curated_data_shared.pricing_configuration_versions in March 2026.
+
+---
+
+EXPERIMENTATION — DPS-SPECIFIC
+
+- EPPO is analysis-only at DH. Experiment launching is done via Zazu, FwF, or FwL — not EPPO.
+- is_in_treatment = TRUE in switchback analysis filters out control observations.
+- is_target_group_level separates TG-level from experiment-level rows in dps_test_cvrs.
+- Switchback randomization is at city × hour-bucket level. 50/50 order split converges over time even if initial city split looks unequal — expected.
+- SRM root causes in pricing experiments: DPS hierarchy resolution dropping SDK calls, incorrect RACI leading to misconfigured assignments.
+- CUPED in EPPO is unreliable — do not use as primary significance decision.
+
+---
+
+SUPPORT
+
+- #log-dps-analytics (C01903CCRU7): exchange channel for Global Analytics, CPL Analytics, and Global Pricing Team. Tanmoy is the escalation point for P0 incidents.
+
+=== END OF DPS KNOWLEDGE ===
 """
 
 
