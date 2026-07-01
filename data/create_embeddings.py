@@ -23,7 +23,8 @@ INPUT_FILE = os.path.join(os.path.dirname(__file__), "slack_messages.json")
 CHROMA_DIR = os.path.join(os.path.dirname(__file__), "..", "slack_bot", "embeddings", "chroma_db")
 COLLECTION_NAME = "slack_history"
 EMBEDDING_MODEL = "text-embedding-005"
-BATCH_SIZE = 50  # Vertex AI embedding batch limit
+BATCH_SIZE = 10
+MAX_CHUNK_CHARS = 6000  # ~1500 tokens, well within per-item limit
 
 
 def load_credentials():
@@ -91,6 +92,11 @@ def main():
 
     chroma = chromadb.PersistentClient(path=CHROMA_DIR)
     collection = chroma.get_or_create_collection(COLLECTION_NAME)
+
+    # Truncate chunks that exceed the max character limit
+    for c in chunks:
+        if len(c["text"]) > MAX_CHUNK_CHARS:
+            c["text"] = c["text"][:MAX_CHUNK_CHARS]
 
     total = len(chunks)
     for i in range(0, total, BATCH_SIZE):

@@ -127,7 +127,11 @@ def main():
     for channel_name in args.channels:
         print(f"\n📥 Fetching #{channel_name} (last {args.days} days)...")
 
-        channel_id = get_channel_id(client, channel_name)
+        # If the channel name looks like an ID already, use it directly
+        if channel_name.startswith("C") and channel_name.isupper():
+            channel_id = channel_name
+        else:
+            channel_id = get_channel_id(client, channel_name)
         if not channel_id:
             print(f"  ⚠️  Channel #{channel_name} not found — skipping")
             continue

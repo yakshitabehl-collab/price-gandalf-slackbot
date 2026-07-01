@@ -16,6 +16,7 @@ import pathlib
 import shutil
 import threading
 from datetime import datetime, timezone
+from typing import Optional
 
 import chromadb
 from dotenv import load_dotenv
@@ -55,7 +56,7 @@ class RAGClient:
         self._collection = None
         self._gemini = None
         self._lock = threading.Lock()
-        self._last_download: datetime | None = None
+        self._last_download: Optional[datetime] = None
         self._load()
         self._schedule_gcs_check()
 
@@ -106,7 +107,7 @@ class RAGClient:
             credentials=credentials,
         )
 
-    def _download_from_gcs(self) -> str | None:
+    def _download_from_gcs(self) -> Optional[str]:
         try:
             from google.cloud import storage
             credentials = _load_credentials()
