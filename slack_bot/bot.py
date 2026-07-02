@@ -227,10 +227,26 @@ def _format_group_tag(raw: str) -> str:
 
 def _handle_uncertainty(response: str) -> str:
     """
-    If the AI flagged uncertainty with [UNSURE], wrap the response with a
-    humorous escalation message and tag the analytics group if configured.
+    If the AI flagged uncertainty (via [UNSURE] marker or common uncertainty phrases),
+    wrap the response with a humorous escalation message and tag the analytics group.
     """
-    if not response.lstrip().startswith("[UNSURE]"):
+    _UNCERTAINTY_PHRASES = [
+        "i cannot provide", "i can't provide",
+        "i cannot find", "i can't find",
+        "i don't have", "i do not have",
+        "not in the documentation", "not covered in", "not mentioned in",
+        "not available in", "no information", "no specific information",
+        "i'm not sure", "i am not sure",
+        "i cannot confirm", "i can't confirm",
+        "i cannot determine", "i can't determine",
+        "outside the scope", "not documented",
+        "the documentation does not", "the documentation doesn't",
+        "unable to provide", "unable to find",
+        "i cannot answer", "i can't answer",
+    ]
+    lower = response.lower()
+    flagged = response.lstrip().startswith("[UNSURE]") or any(p in lower for p in _UNCERTAINTY_PHRASES)
+    if not flagged:
         return response
     clean = re.sub(r"^\[UNSURE\]\s*\n?", "", response.lstrip(), count=1).strip()
     tag = _format_group_tag(config.escalation_group)
