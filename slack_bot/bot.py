@@ -190,12 +190,19 @@ def _handle_cancel(thread_ts: str, user_id: str, say):
 
 
 def _inject_doc_links(response: str) -> str:
+    # Regex handles titles that may themselves contain brackets, e.g. [CHOICE] SG|...
+    _SOURCE_RE = re.compile(r'\[SOURCE:\s*((?:[^\[\]]+|\[[^\]]*\])*)\]')
+
     def _replace_marker(match):
         title = match.group(1).strip()
         url = _doc_links.get(title)
-        return f"<{url}|{title}>" if url else match.group(0)
+        if url:
+            return f"<{url}|{title}>"
+        # Title not found in Confluence — strip the [SOURCE: ...] wrapper so it
+        # doesn't show as confusing raw brackets. Keep the title inline.
+        return title
 
-    response = re.sub(r'\[SOURCE:\s*([^\]]+)\]', _replace_marker, response)
+    response = _SOURCE_RE.sub(_replace_marker, response)
     for title, url in _doc_links.items():
         link = f"<{url}|{title}>"
         response = re.sub(r'(?<!\|)' + re.escape(title), link, response)
