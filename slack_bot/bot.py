@@ -51,7 +51,9 @@ def build_rag_context(query: str) -> str:
         return ""
     joined = "\n\n---\n\n".join(chunks)
     return (
-        "Relevant past messages from the pricing channel that may help answer the question:\n\n"
+        "BACKGROUND CONTEXT (past Slack messages — use to inform your answer, do NOT quote verbatim):\n"
+        "Do not reproduce raw test names, DPS identifiers (e.g. [CHOICE] SG|...), Jira keys, "
+        "or Slack message fragments directly. Summarise and paraphrase instead.\n\n"
         + joined
         + "\n\n---\n\n"
     )
