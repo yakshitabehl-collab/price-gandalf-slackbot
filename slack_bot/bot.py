@@ -202,6 +202,34 @@ def _inject_doc_links(response: str) -> str:
     return response
 
 
+def _format_group_tag(raw: str) -> str:
+    """Convert a group handle or subteam ID to the correct Slack mention format."""
+    if not raw:
+        return ""
+    raw = raw.strip().lstrip("@")
+    if raw.startswith("<!"):
+        return f" {raw}"
+    if raw.startswith("S") and len(raw) > 5:
+        # Proper Slack subteam ID — produces a real ping
+        return f" <!subteam^{raw}|{raw}>"
+    # Plain handle — visible but won't ping; good enough as a breadcrumb
+    return f" @{raw}"
+
+
+def _handle_uncertainty(response: str) -> str:
+    """
+    If the AI flagged uncertainty with [UNSURE], wrap the response with a
+    humorous escalation message and tag the analytics group if configured.
+    """
+    if not response.lstrip().startswith("[UNSURE]"):
+        return response
+    clean = re.sub(r"^\[UNSURE\]\s*\n?", "", response.lstrip(), count=1).strip()
+    tag = _format_group_tag(config.escalation_group)
+    header = f"🔮 *My crystal ball is a little foggy here. Summoning higher authority.*{tag}\n\n"
+    footer = "\n\n_If I got this wrong, reply `fix: [correction]` and I'll update the docs._"
+    return header + clean + footer
+
+
 def detect_jira_intent(message: str) -> bool:
     jira_keywords = ["jira", "ticket", "epic", "sprint"]
     if re.search(r'\b[A-Z]{2,10}-\d+\b', message):
@@ -381,6 +409,7 @@ def handle_mention(event, say, client):
                 prompt_parts.append("Please respond considering the context above.")
             response = vertex_client.get_ai_response("\n\n".join(prompt_parts), system_instruction=combined_system_prompt)
             response = _inject_doc_links(response)
+            response = _handle_uncertainty(response)
 
         say(text=response, thread_ts=thread_ts)
         log_qa(question=message, answer=response, user_id=user_id,
@@ -472,6 +501,7 @@ def handle_message(event, say, client):
                 prompt_parts.append("Please respond considering the context above.")
             response = vertex_client.get_ai_response("\n\n".join(prompt_parts), system_instruction=combined_system_prompt)
             response = _inject_doc_links(response)
+            response = _handle_uncertainty(response)
 
             say(text=response)
             log_qa(question=text, answer=response, user_id=event.get("user"),
@@ -527,6 +557,7 @@ def handle_message(event, say, client):
                 prompt_parts.append("Please respond considering the context above.")
             response = vertex_client.get_ai_response("\n\n".join(prompt_parts), system_instruction=combined_system_prompt)
             response = _inject_doc_links(response)
+            response = _handle_uncertainty(response)
             say(text=response, thread_ts=ts)
             log_qa(question=text, answer=response, user_id=event.get("user"),
                    channel_id=channel_id, request_type="channel_auto", thread_ts=ts,

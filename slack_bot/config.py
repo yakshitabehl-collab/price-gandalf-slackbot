@@ -26,6 +26,7 @@ class Config:
         self.jira_default_project = self._get_env("JIRA_DEFAULT_PROJECT", "CLOGBI")
 
         self.pricing_channel_id = self._get_env("PRICING_CHANNEL_ID", "")
+        self.escalation_group = self._get_env("ESCALATION_GROUP", "")
 
         if self.google_credentials_path:
             value = self.google_credentials_path.strip()

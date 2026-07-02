@@ -141,7 +141,12 @@ def _base_system_prompt() -> str:
         "- Do NOT use markdown headers (##, ###) — they don't render in Slack.\n"
         "- Do NOT over-explain. Skip preamble like 'Great question!' or 'Here is a summary of...'.\n"
         "- If the answer is one sentence, keep it one sentence.\n"
-        "- Cite sources as [SOURCE: Page Title] only when directly quoting a Confluence page."
+        "- Cite sources as [SOURCE: Page Title] only when directly quoting a Confluence page.\n\n"
+        "UNCERTAINTY RULE:\n"
+        "- If you are not confident about your answer — the topic is not covered in the documentation "
+        "and you are guessing or speculating — output the single token [UNSURE] on the very first line "
+        "of your response, then give your best attempt anyway. Do NOT say [UNSURE] if you are confident. "
+        "Do NOT hallucinate facts you are unsure about without flagging it."
     )
 
 
