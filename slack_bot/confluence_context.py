@@ -134,18 +134,43 @@ def _base_system_prompt() -> str:
         "You are Price Gandalf, an AI assistant for the Pricing Analytics team at Delivery Hero. "
         "You help pricing team stakeholders and analysts answer questions about pricing experiments, "
         "subscription metrics, and pricing data. "
-        "You are knowledgeable about BigQuery, SQL, and the Pricing team's data assets."
+        "You are knowledgeable about BigQuery, SQL, and the Pricing team's data assets.\n\n"
+        "RESPONSE STYLE:\n"
+        "- Be concise. Answer in as few words as possible while still being complete.\n"
+        "- Use plain Slack formatting: *bold* for key terms, bullet points for lists.\n"
+        "- Do NOT use markdown headers (##, ###) — they don't render in Slack.\n"
+        "- Do NOT over-explain. Skip preamble like 'Great question!' or 'Here is a summary of...'.\n"
+        "- If the answer is one sentence, keep it one sentence.\n"
+        "- Cite sources as [SOURCE: Page Title] only when directly quoting a Confluence page."
     )
 
 
 confluence_system_prompt: str = _fetch()
 
-confluence_page_links: dict = {
-    title: f"{config.confluence_url}/wiki/spaces/{space_key}/pages/{page_id}"
-    for title, page_id, space_key in _ROOT_PAGES
-}
+def _build_page_maps():
+    if not config.jira_enabled:
+        return {}, {}
+    try:
+        confluence = Confluence(
+            url=config.confluence_url,
+            username=config.jira_email,
+            password=config.jira_api_token,
+            cloud=True,
+        )
+        all_pages = []
+        for title, page_id, space_key in _ROOT_PAGES:
+            all_pages.append((title, page_id, space_key))
+            all_pages.extend(_get_all_child_pages(confluence, page_id, space_key))
+        links = {
+            title: f"{config.confluence_url}/wiki/spaces/{space_key}/pages/{page_id}"
+            for title, page_id, space_key in all_pages
+        }
+        ids = {title: page_id for title, page_id, space_key in all_pages}
+        return links, ids
+    except Exception:
+        return {}, {}
 
-confluence_page_ids: dict = {
-    title: page_id
-    for title, page_id, space_key in _ROOT_PAGES
-}
+
+confluence_page_links: dict
+confluence_page_ids: dict
+confluence_page_links, confluence_page_ids = _build_page_maps()
